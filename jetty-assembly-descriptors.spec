@@ -1,68 +1,55 @@
-%{?_javapackages_macros:%_javapackages_macros}
 Name:           jetty-assembly-descriptors
-Version:        1.0
-Release:        9.0%{?dist}
+Version:        1.1
+Release:        1
 Summary:        Jetty assembly descriptors used for building
 
 
 License:        ASL 2.0 or EPL
 URL:            https://www.eclipse.org/jetty/
-Source0:        http://git.eclipse.org/c/jetty/org.eclipse.jetty.toolchain.git/snapshot/%{name}-%{version}.tar.bz2
+Source0:        https://github.com/jetty/jetty.toolchain/archive/refs/tags/%{name}-%{version}.tar.gz
 BuildArch:      noarch
+BuildRequires:	python
+BuildSystem:	maven
 
-Source1:        http://www.apache.org/licenses/LICENSE-2.0.txt
-Source2:        http://www.eclipse.org/legal/epl-v10.html
+Source1:        https://www.apache.org/licenses/LICENSE-2.0.txt
+Source2:        https://www.eclipse.org/legal/epl/epl-v10.html
 
-BuildRequires:  jpackage-utils
-BuildRequires:  maven-local
-BuildRequires:  jetty-toolchain
-BuildRequires:  maven-surefire-provider-junit
-
-Requires:       maven
-Requires:       jpackage-utils
-Requires:       jetty-toolchain
+Requires:       javapackages-filesystem
 
 %description
 Jetty assembly descriptors used for building
 
 %prep
-%setup -q
+%setup -q -n jetty-toolchain-%{name}-%{version}
+# The tag is the whole toolchain reactor. Publish this module on its own.
+python - <<'PY'
+import re
+import shutil
+from pathlib import Path
+root = Path(".").resolve()
+mod = root / "%{name}"
+if mod.is_dir():
+    stage = root.parent / ("%{name}-module")
+    if stage.exists():
+        shutil.rmtree(stage)
+    shutil.copytree(mod, stage)
+    for child in list(root.iterdir()):
+        if child.is_dir():
+            shutil.rmtree(child)
+        else:
+            child.unlink()
+    for child in list(stage.iterdir()):
+        shutil.move(str(child), root / child.name)
+    shutil.rmtree(stage)
+path = root / "pom.xml"
+text = path.read_text()
+text = re.sub(r"\s*<parent>.*?</parent>", "", text, count=1, flags=re.S)
+head, sep, tail = text.partition("<artifactId>")
+if sep and "<groupId>" not in head:
+    text = head + "<groupId>org.eclipse.jetty.toolchain</groupId>\n  " + sep + tail
+path.write_text(text)
+PY
 cp -p %{SOURCE1} %{SOURCE2} .
-
-%build
-%mvn_build
-
-%install
-%mvn_install
 
 %files -f .mfiles
 %doc LICENSE-2.0.txt epl-v10.html
-
-%changelog
-* Mon Aug  5 2013 Stanislav Ochotnicky <sochotnicky@redhat.com> - 1.0-9
-- Update to latest packaging guidelines
-
-* Sat Aug 03 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.0-8
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_20_Mass_Rebuild
-
-* Thu Feb 14 2013 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.0-7
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_19_Mass_Rebuild
-
-* Wed Feb 06 2013 Java SIG <java-devel@lists.fedoraproject.org> - 1.0-6
-- Update for https://fedoraproject.org/wiki/Fedora_19_Maven_Rebuild
-- Replace maven BuildRequires with maven-local
-
-* Wed Oct 17 2012 Mikolaj Izdebski <mizdebsk@redhat.com> - 1.0-5
-- Install license files
-
-* Thu Jul 19 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.0-4
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_18_Mass_Rebuild
-
-* Fri Jan 13 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 1.0-3
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_17_Mass_Rebuild
-
-* Fri Nov  4 2011 Stanislav Ochotnicky <sochotnicky@redhat.com> - 1.0-2
-- Added missing BR on maven-surefire-provider-junit
-
-* Thu Nov  3 2011 Stanislav Ochotnicky <sochotnicky@redhat.com> - 1.0-1
-- Initial version of the package
