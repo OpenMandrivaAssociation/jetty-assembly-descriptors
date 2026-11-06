@@ -2,8 +2,7 @@ Name:           jetty-assembly-descriptors
 Version:        1.1
 Release:        1
 Summary:        Jetty assembly descriptors used for building
-
-
+Group:          Development/Java
 License:        ASL 2.0 or EPL
 URL:            https://www.eclipse.org/jetty/
 Source0:        https://github.com/jetty/jetty.toolchain/archive/refs/tags/%{name}-%{version}.tar.gz
